@@ -3,6 +3,18 @@ import tempfile
 import os
 import sys
 
+# Hugging Face Spaces 환경 설정 - 캐시 디렉토리 권한 문제 해결
+os.environ['HF_HOME'] = '/tmp/huggingface'
+os.environ['TRANSFORMERS_CACHE'] = '/tmp/huggingface/transformers'
+os.environ['HF_DATASETS_CACHE'] = '/tmp/huggingface/datasets'
+os.environ['MARKER_CACHE_DIR'] = '/tmp/marker_cache'
+os.environ['XDG_CACHE_HOME'] = '/tmp/cache'
+
+# 캐시 디렉토리 생성
+cache_dirs = ['/tmp/huggingface', '/tmp/marker_cache', '/tmp/cache', '/tmp/huggingface/transformers', '/tmp/huggingface/datasets']
+for cache_dir in cache_dirs:
+    os.makedirs(cache_dir, exist_ok=True)
+
 # Streamlit Community Cloud 환경설정
 st.set_page_config(
     page_title="📄 Marker Document Converter",
@@ -68,8 +80,9 @@ def main():
         if st.button("🔄 변환 시작", type="primary"):
             try:
                 with st.spinner("🔄 PDF를 변환하는 중입니다... 잠시만 기다려주세요."):
-                    # 임시 파일로 저장
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                    # 임시 파일을 /tmp 디렉토리에 생성 (권한 문제 해결)
+                    file_extension = uploaded_file.name.lower().split('.')[-1]
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_extension}', dir='/tmp') as tmp_file:
                         tmp_file.write(uploaded_file.getvalue())
                         tmp_path = tmp_file.name
                     
@@ -77,81 +90,57 @@ def main():
                         # 메모리 사용량 체크
                         import psutil
                         memory_usage = psutil.virtual_memory()
-                        st.info(f"📊 현재 메모리 사용률: {memory_usage.percent:.1f}%")
+                        st.info(f"📊 현재 메모리 사용률: {memory_usage.percent:.1f}% (사용가능: {memory_usage.available/1024/1024/1024:.1f}GB)")
+                        
+                        # 캐시 디렉토리 확인 메시지
+                        st.info(f"📁 캐시 디렉토리: {os.environ.get('MARKER_CACHE_DIR', '/tmp/marker_cache')}")
                         
                         if memory_usage.percent > 85:
                             st.warning("⚠️ 메모리 사용률이 높습니다. 변환이 실패할 수 있습니다.")
                         
+                        # HF_TOKEN 환경변수 확인
+                        hf_token = os.environ.get("HF_TOKEN")
+                        if not hf_token:
+                            st.warning("⚠️ HF_TOKEN 환경변수가 설정되지 않았습니다.")
+                            st.info("💡 토큰 없이 모델 로딩을 시도합니다...")
+                        
                         # Marker 패키지 import
-                        from marker.converters.pdf import PdfConverter
-                        from marker.converters.extraction import ExtractionConverter
-                        from marker.models import create_model_dict
-                        from marker.output import text_from_rendered
+                        from marker.convert import convert_single_pdf
+                        from marker.models import load_all_models
                         
                         st.success("✅ Marker 패키지 로드 완료!")
                         
-                        # 진행 상태 표시
-                        progress_bar = st.progress(0)
-                        status_text = st.empty()
+                        st.info("🔄 PDF 문서 분석 중...")
+                        st.info(f"🔍 처리할 파일: {uploaded_file.name} ({uploaded_file.type.upper()})")
                         
-                        status_text.text("🔄 AI 모델 로딩 중...")
-                        progress_bar.progress(10)
+                        # AI 모델 로딩 with progress spinner
+                        with st.spinner("💡 AI 모델 로딩 중..."):
+                            # 모델 로드 시 캐시 경로 명시적 지정
+                            model_lst = load_all_models()
+                            st.success("✅ AI 모델 로딩 완료!")
                         
-                        # 파일 확장자 확인
-                        file_extension = uploaded_file.name.lower().split('.')[-1]
-                        
-                        # 모델 로드 전 메모리 체크
-                        if memory_usage.percent > 70:
-                            st.error("❌ 메모리 부족으로 변환을 진행할 수 없습니다.")
-                            st.info("💡 Streamlit Community Cloud의 메모리 제한으로 인해 대용량 AI 모델 로딩이 어렵습니다.")
-                            return
-                        
-                        # 모델 로드 (메모리 제한으로 인해 실패할 수 있음)
-                        try:
-                            model_dict = create_model_dict()
-                        except Exception as model_error:
-                            st.error("❌ AI 모델 로딩 실패 - 메모리 부족")
-                            st.error(f"상세 오류: {str(model_error)}")
-                            st.info("💡 로컬 환경에서 사용하거나, 더 작은 문서로 시도해주세요.")
-                            return
-                        
-                        progress_bar.progress(30)
-                        
-                        status_text.text(f"🔄 {file_extension.upper()} 문서 분석 중...")
-                        
-                        # 문서 변환 설정
-                        config = {
-                            "extract_images": extract_images,
-                        }
-                        
-                        # 파일 타입에 따른 변환기 선택
-                        if file_extension == 'pdf':
-                            converter = PdfConverter(
-                                artifact_dict=model_dict,
-                                config=config
+                        # 변환 실행
+                        with st.spinner("🔄 문서 변환 중..."):
+                            full_text, images, out_meta = convert_single_pdf(
+                                tmp_path,
+                                model_lst,
+                                extract_images=extract_images,
+                                ocr_all_pages=use_llm
                             )
-                        else:
-                            # 다른 문서 형식은 ExtractionConverter 사용
-                            converter = ExtractionConverter(
-                                artifact_dict=model_dict,
-                                config=config
-                            )
-                        progress_bar.progress(50)
                         
-                        status_text.text("🔄 변환 실행 중...")
-                        
-                        # 변환 수행
-                        rendered = converter(tmp_path)
-                        progress_bar.progress(80)
-                        
-                        # 결과 추출
+                        # 출력 형식에 따른 결과 생성
                         if output_format == "markdown":
-                            result = text_from_rendered(rendered)
-                        else:
-                            result = str(rendered)  # JSON/HTML 형식
-                        
-                        progress_bar.progress(100)
-                        status_text.text("✅ 변환 완료!")
+                            result = full_text
+                        elif output_format == "json":
+                            import json
+                            result_data = {
+                                "text": full_text,
+                                "metadata": out_meta,
+                                "images": len(images) if images else 0
+                            }
+                            result = json.dumps(result_data, ensure_ascii=False, indent=2)
+                        else:  # html
+                            result = f"<html><body><pre>{full_text}</pre></body></html>"
                         
                         # 결과 표시
                         st.success("🎉 변환이 완료되었습니다!")
@@ -182,9 +171,17 @@ def main():
                         st.error(f"오류 상세: {str(e)}")
                         st.info("💡 로컬에서만 사용 가능한 기능입니다.")
                     
+                    except PermissionError as e:
+                        if "/usr/local" in str(e) or "Permission denied" in str(e):
+                            st.error("❌ 변환 중 오류가 발생했습니다: 시스템 파일 접근 권한 문제")
+                            st.error(f"상세 오류: {str(e)}")
+                            st.info("💡 일시적 오류일 수 있습니다. 다시 시도해보세요.")
+                        else:
+                            st.error(f"❌ 권한 오류: {str(e)}")
+                    
                     except Exception as e:
                         st.error(f"❌ 변환 중 오류가 발생했습니다: {str(e)}")
-                        st.info("💡 파일이 너무 크거나 복잡할 수 있습니다. 더 작은 파일로 시도해보세요.")
+                        st.info("💡 일시적 오류일 수 있습니다. 다시 시도해보세요.")
                     
                     finally:
                         # 임시 파일 정리
