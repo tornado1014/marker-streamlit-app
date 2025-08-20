@@ -3,9 +3,8 @@ title: Marker Document Converter
 emoji: 📄
 colorFrom: blue
 colorTo: green
-sdk: streamlit
-sdk_version: 1.28.0
-app_file: app.py
+sdk: docker
+app_port: 8501
 pinned: false
 license: mit
 ---
