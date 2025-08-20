@@ -136,12 +136,27 @@ def main():
                         
                         # AI 모델 로드 (Hugging Face Spaces 16GB 환경)
                         try:
+                            # HF 토큰 환경변수 설정 시도
+                            import os
+                            if not os.getenv('HF_TOKEN'):
+                                st.warning("⚠️ HF_TOKEN 환경변수가 설정되지 않았습니다.")
+                                st.info("💡 토큰 없이 모델 로딩을 시도합니다...")
+                            
                             model_dict = create_model_dict()
                             st.success("✅ AI 모델 로딩 완료!")
                         except Exception as model_error:
+                            error_str = str(model_error)
                             st.error("❌ AI 모델 로딩 실패")
-                            st.error(f"상세 오류: {str(model_error)}")
-                            st.info("💡 첫 실행 시 모델 다운로드에 시간이 걸릴 수 있습니다. 잠시 후 다시 시도해주세요.")
+                            st.error(f"상세 오류: {error_str}")
+                            
+                            if "403" in error_str or "Forbidden" in error_str:
+                                st.error("🚫 **403 Forbidden - HF Spaces 네트워크 정책 제한**")
+                                st.info("📋 **원인**: Hugging Face Spaces의 새로운 보안 정책")
+                                st.info("🔒 **제한사항**: 대용량 AI 모델 다운로드 차단")
+                                st.info("💡 **해결방안**: 로컬 환경에서 사용하거나 HF 지원팀 문의")
+                                st.markdown("**📧 문의**: [website@huggingface.co](mailto:website@huggingface.co)")
+                            else:
+                                st.info("💡 첫 실행 시 모델 다운로드에 시간이 걸릴 수 있습니다. 잠시 후 다시 시도해주세요.")
                             return
                         
                         progress_bar.progress(30)
