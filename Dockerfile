@@ -27,19 +27,23 @@ COPY . .
 # Streamlit 포트 설정
 EXPOSE 8501
 
-# Streamlit 설정
-RUN mkdir -p ~/.streamlit/
+# Streamlit 설정 디렉터리 생성 (권한 문제 해결)
+RUN mkdir -p /app/.streamlit
 RUN echo "\
 [general]\n\
 email = \"\"\n\
-" > ~/.streamlit/credentials.toml
+" > /app/.streamlit/credentials.toml
 
 RUN echo "\
 [server]\n\
 headless = true\n\
 enableCORS = false\n\
 port = 8501\n\
-" > ~/.streamlit/config.toml
+gatherUsageStats = false\n\
+" > /app/.streamlit/config.toml
 
-# 앱 실행
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# 환경 변수로 Streamlit 설정 디렉터리 지정
+ENV STREAMLIT_CONFIG_DIR /app/.streamlit
+
+# 앱 실행 (사용자 통계 비활성화)
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false"]
