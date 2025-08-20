@@ -145,13 +145,19 @@ def main():
                             os.environ['TRANSFORMERS_CACHE'] = f"{cache_dir}/transformers"
                             os.environ['HF_HOME'] = f"{cache_dir}/huggingface"
                             
+                            # Static 디렉터리 권한 문제 해결
+                            static_dir = f"{cache_dir}/static"
+                            os.environ['STATIC_ROOT'] = static_dir
+                            os.environ['DJANGO_STATIC_ROOT'] = static_dir
+                            
                             # 캐시 디렉터리 생성 및 권한 설정
                             dirs_to_create = [
                                 cache_dir,
                                 f"{cache_dir}/huggingface",
                                 f"{cache_dir}/torch", 
                                 f"{cache_dir}/transformers",
-                                f"{cache_dir}/datalab"
+                                f"{cache_dir}/datalab",
+                                static_dir
                             ]
                             
                             for dir_path in dirs_to_create:
@@ -160,6 +166,16 @@ def main():
                                     os.chmod(dir_path, 0o777)
                                 except:
                                     pass  # 권한 설정 실패해도 계속 진행
+                            
+                            # 기존 static 디렉터리를 우회하는 심볼릭 링크 생성
+                            try:
+                                system_static = "/usr/local/lib/python3.10/site-packages/static"
+                                if not os.path.exists(system_static) and not os.path.islink(system_static):
+                                    os.makedirs(os.path.dirname(system_static), exist_ok=True)
+                                    os.symlink(static_dir, system_static)
+                                    st.info("🔗 Static 디렉터리 심볼릭 링크 생성")
+                            except Exception as e:
+                                st.info(f"⚠️ 심볼릭 링크 생성 실패: {str(e)}")
                             
                             st.info(f"📁 캐시 디렉터리: {cache_dir}")
                             
