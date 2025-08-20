@@ -9,9 +9,15 @@ os.environ['TRANSFORMERS_CACHE'] = '/tmp/huggingface/transformers'
 os.environ['HF_DATASETS_CACHE'] = '/tmp/huggingface/datasets'
 os.environ['MARKER_CACHE_DIR'] = '/tmp/marker_cache'
 os.environ['XDG_CACHE_HOME'] = '/tmp/cache'
+os.environ['TORCH_HOME'] = '/tmp/torch'
+os.environ['HUGGINGFACE_HUB_CACHE'] = '/tmp/huggingface/hub'
 
 # 캐시 디렉토리 생성
-cache_dirs = ['/tmp/huggingface', '/tmp/marker_cache', '/tmp/cache', '/tmp/huggingface/transformers', '/tmp/huggingface/datasets']
+cache_dirs = [
+    '/tmp/huggingface', '/tmp/marker_cache', '/tmp/cache', 
+    '/tmp/huggingface/transformers', '/tmp/huggingface/datasets',
+    '/tmp/torch', '/tmp/huggingface/hub'
+]
 for cache_dir in cache_dirs:
     os.makedirs(cache_dir, exist_ok=True)
 
