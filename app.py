@@ -5,19 +5,28 @@ import sys
 
 # Streamlit Community Cloud 환경설정
 st.set_page_config(
-    page_title="📄 Marker PDF Converter",
+    page_title="📄 Marker Document Converter",
     page_icon="📄",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 def main():
-    st.title("📄 Marker PDF to Markdown Converter")
+    st.title("📄 Marker Document to Markdown Converter")
     st.markdown("""
-    이 앱은 **Marker**를 사용하여 PDF 파일을 마크다운으로 변환합니다.
+    이 앱은 **Marker**를 사용하여 다양한 문서를 마크다운으로 변환합니다.
+    
+    **지원 형식:**
+    - 📄 **PDF** - Adobe PDF 문서
+    - 📝 **DOCX** - Microsoft Word 문서  
+    - 📊 **PPTX** - Microsoft PowerPoint 프레젠테이션
+    - 📋 **XLSX** - Microsoft Excel 스프레드시트
+    - 🌐 **HTML** - 웹 페이지 파일
+    - 📚 **EPUB** - 전자책 파일
+    - 🖼️ **Images** - PNG, JPG 이미지 파일
     
     **주의사항:**
-    - Streamlit Community Cloud의 리소스 제한으로 인해 대용량 파일이나 복잡한 PDF는 처리가 어려울 수 있습니다.
+    - Streamlit Community Cloud의 리소스 제한으로 인해 대용량 파일이나 복잡한 문서는 처리가 어려울 수 있습니다.
     - 첫 실행 시 AI 모델을 다운로드하므로 시간이 걸릴 수 있습니다.
     """)
     
@@ -44,9 +53,9 @@ def main():
     
     # 파일 업로드
     uploaded_file = st.file_uploader(
-        "📁 PDF 파일을 업로드하세요",
-        type=['pdf'],
-        help="최대 200MB까지 업로드 가능합니다"
+        "📁 문서 파일을 업로드하세요",
+        type=['pdf', 'docx', 'pptx', 'xlsx', 'html', 'epub', 'png', 'jpg', 'jpeg'],
+        help="지원 형식: PDF, DOCX, PPTX, XLSX, HTML, EPUB, PNG, JPG (최대 200MB)"
     )
     
     if uploaded_file is not None:
@@ -66,6 +75,7 @@ def main():
                     try:
                         # Marker 패키지 import
                         from marker.converters.pdf import PdfConverter
+                        from marker.converters.extraction import ExtractionConverter
                         from marker.models import create_model_dict
                         from marker.output import text_from_rendered
                         
@@ -78,22 +88,32 @@ def main():
                         status_text.text("🔄 AI 모델 로딩 중...")
                         progress_bar.progress(10)
                         
+                        # 파일 확장자 확인
+                        file_extension = uploaded_file.name.lower().split('.')[-1]
+                        
                         # 모델 로드
                         model_dict = create_model_dict()
                         progress_bar.progress(30)
                         
-                        status_text.text("🔄 PDF 분석 중...")
+                        status_text.text(f"🔄 {file_extension.upper()} 문서 분석 중...")
                         
-                        # PDF 변환 설정
+                        # 문서 변환 설정
                         config = {
                             "extract_images": extract_images,
                         }
                         
-                        # 변환기 생성
-                        converter = PdfConverter(
-                            artifact_dict=model_dict,
-                            config=config
-                        )
+                        # 파일 타입에 따른 변환기 선택
+                        if file_extension == 'pdf':
+                            converter = PdfConverter(
+                                artifact_dict=model_dict,
+                                config=config
+                            )
+                        else:
+                            # 다른 문서 형식은 ExtractionConverter 사용
+                            converter = ExtractionConverter(
+                                artifact_dict=model_dict,
+                                config=config
+                            )
                         progress_bar.progress(50)
                         
                         status_text.text("🔄 변환 실행 중...")

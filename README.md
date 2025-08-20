@@ -1,10 +1,11 @@
-# 📄 Marker PDF to Markdown Converter
+# 📄 Marker Document to Markdown Converter
 
-A web application built with Streamlit that converts PDF files to Markdown using the powerful [Marker](https://github.com/VikParuchuri/marker) library.
+A web application built with Streamlit that converts various document formats to Markdown using the powerful [Marker](https://github.com/VikParuchuri/marker) library.
 
 ## 🌟 Features
 
-- **PDF to Markdown Conversion**: High-quality conversion preserving formatting
+- **Multi-Format Document Conversion**: High-quality conversion preserving formatting
+- **Supported Formats**: PDF, DOCX, PPTX, XLSX, HTML, EPUB, Images (PNG, JPG)
 - **Multiple Output Formats**: Markdown, JSON, and HTML
 - **Image Extraction**: Extract and preserve images from PDFs
 - **LLM Enhancement**: Optional AI-powered accuracy improvements
