@@ -26,9 +26,9 @@ def main():
     - 🖼️ **Images** - PNG, JPG 이미지 파일
     
     **주의사항:**
-    - Streamlit Community Cloud의 메모리 제한(1GB)으로 인해 대용량 파일 처리가 어려울 수 있습니다.
-    - AI 모델 로딩에 대용량 메모리가 필요하여 클라우드에서 실행 제한이 있을 수 있습니다.
-    - 복잡한 문서나 큰 파일은 로컬 환경에서 사용을 권장합니다.
+    - 🚀 Hugging Face Spaces에서 16GB 메모리로 구동됩니다.
+    - 첫 실행 시 AI 모델 다운로드로 시간이 소요될 수 있습니다.
+    - 대용량 파일은 처리 시간이 오래 걸릴 수 있습니다.
     """)
     
     # 사이드바 설정
@@ -74,13 +74,13 @@ def main():
                         tmp_path = tmp_file.name
                     
                     try:
-                        # 메모리 사용량 체크
-                        import psutil
-                        memory_usage = psutil.virtual_memory()
-                        st.info(f"📊 현재 메모리 사용률: {memory_usage.percent:.1f}%")
-                        
-                        if memory_usage.percent > 85:
-                            st.warning("⚠️ 메모리 사용률이 높습니다. 변환이 실패할 수 있습니다.")
+                        # 메모리 사용량 체크 (Hugging Face Spaces 16GB)
+                        try:
+                            import psutil
+                            memory_usage = psutil.virtual_memory()
+                            st.info(f"📊 현재 메모리 사용률: {memory_usage.percent:.1f}% (사용가능: {memory_usage.available//1024//1024//1024:.1f}GB)")
+                        except:
+                            st.info("📊 Hugging Face Spaces 16GB 환경에서 실행 중")
                         
                         # Marker 패키지 import
                         from marker.converters.pdf import PdfConverter
@@ -100,19 +100,14 @@ def main():
                         # 파일 확장자 확인
                         file_extension = uploaded_file.name.lower().split('.')[-1]
                         
-                        # 모델 로드 전 메모리 체크
-                        if memory_usage.percent > 70:
-                            st.error("❌ 메모리 부족으로 변환을 진행할 수 없습니다.")
-                            st.info("💡 Streamlit Community Cloud의 메모리 제한으로 인해 대용량 AI 모델 로딩이 어렵습니다.")
-                            return
-                        
-                        # 모델 로드 (메모리 제한으로 인해 실패할 수 있음)
+                        # AI 모델 로드 (Hugging Face Spaces 16GB 환경)
                         try:
                             model_dict = create_model_dict()
+                            st.success("✅ AI 모델 로딩 완료!")
                         except Exception as model_error:
-                            st.error("❌ AI 모델 로딩 실패 - 메모리 부족")
+                            st.error("❌ AI 모델 로딩 실패")
                             st.error(f"상세 오류: {str(model_error)}")
-                            st.info("💡 로컬 환경에서 사용하거나, 더 작은 문서로 시도해주세요.")
+                            st.info("💡 첫 실행 시 모델 다운로드에 시간이 걸릴 수 있습니다. 잠시 후 다시 시도해주세요.")
                             return
                         
                         progress_bar.progress(30)
