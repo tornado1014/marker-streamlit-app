@@ -12,6 +12,19 @@ st.set_page_config(
 )
 
 def main():
+    # 디버그 정보
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🔧 디버그 정보")
+    if st.sidebar.button("🔍 환경 정보 표시"):
+        st.sidebar.write(f"Python: {sys.version}")
+        st.sidebar.write(f"Streamlit: {st.__version__}")
+        try:
+            import psutil
+            memory = psutil.virtual_memory()
+            st.sidebar.write(f"메모리: {memory.total//1024//1024//1024:.1f}GB 총량")
+            st.sidebar.write(f"사용률: {memory.percent:.1f}%")
+        except:
+            st.sidebar.write("psutil 정보 없음")
     st.title("📄 Marker Document to Markdown Converter")
     st.markdown("""
     이 앱은 **Marker**를 사용하여 다양한 문서를 마크다운으로 변환합니다.
@@ -56,20 +69,30 @@ def main():
     uploaded_file = st.file_uploader(
         "📁 문서 파일을 업로드하세요",
         type=['pdf', 'docx', 'pptx', 'xlsx', 'html', 'epub', 'png', 'jpg', 'jpeg'],
-        help="지원 형식: PDF, DOCX, PPTX, XLSX, HTML, EPUB, PNG, JPG (최대 200MB)"
+        help="지원 형식: PDF, DOCX, PPTX, XLSX, HTML, EPUB, PNG, JPG (최대 200MB)",
+        key="file_uploader"
     )
     
     if uploaded_file is not None:
         # 파일 정보 표시
+        file_size = len(uploaded_file.getvalue())
         st.success(f"✅ 파일 업로드 완료: {uploaded_file.name}")
-        st.info(f"📊 파일 크기: {len(uploaded_file.getvalue()):,} bytes")
+        st.info(f"📊 파일 크기: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
+        
+        # 파일 타입 체크
+        file_extension = uploaded_file.name.lower().split('.')[-1]
+        if file_extension in ['pdf', 'docx', 'pptx', 'xlsx', 'html', 'epub', 'png', 'jpg', 'jpeg']:
+            st.info(f"📄 파일 형식: {file_extension.upper()} (지원됨)")
+        else:
+            st.warning("⚠️ 지원되지 않는 파일 형식입니다.")
         
         # 변환 버튼
         if st.button("🔄 변환 시작", type="primary"):
             try:
-                with st.spinner("🔄 PDF를 변환하는 중입니다... 잠시만 기다려주세요."):
-                    # 임시 파일로 저장
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                with st.spinner(f"🔄 {file_extension.upper()} 문서를 변환하는 중입니다... 잠시만 기다려주세요."):
+                    # 임시 파일로 저장 (확장자에 맞게)
+                    file_suffix = f'.{file_extension}'
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as tmp_file:
                         tmp_file.write(uploaded_file.getvalue())
                         tmp_path = tmp_file.name
                     
@@ -97,8 +120,8 @@ def main():
                         status_text.text("🔄 AI 모델 로딩 중...")
                         progress_bar.progress(10)
                         
-                        # 파일 확장자 확인
-                        file_extension = uploaded_file.name.lower().split('.')[-1]
+                        # 파일 확장자는 이미 위에서 확인했음
+                        st.info(f"🔍 처리할 파일: {uploaded_file.name} ({file_extension.upper()})")
                         
                         # AI 모델 로드 (Hugging Face Spaces 16GB 환경)
                         try:
