@@ -201,9 +201,27 @@ def main():
                         
                         status_text.text("🔄 변환 실행 중...")
                         
-                        # 변환 수행
-                        rendered = converter(tmp_path)
-                        progress_bar.progress(80)
+                        # 변환 수행 (타임아웃 설정)
+                        import signal
+                        
+                        def timeout_handler(signum, frame):
+                            raise TimeoutError("변환 처리 시간 초과")
+                        
+                        try:
+                            # 5분 타임아웃 설정
+                            signal.signal(signal.SIGALRM, timeout_handler)
+                            signal.alarm(300)  # 5분
+                            
+                            rendered = converter(tmp_path)
+                            signal.alarm(0)  # 타임아웃 해제
+                            progress_bar.progress(80)
+                        except TimeoutError:
+                            st.error("⏰ 변환 시간 초과 (5분)")
+                            st.info("💡 파일이 복잡하거나 큽니다. 더 간단한 문서로 시도해보세요.")
+                            return
+                        except Exception as conv_error:
+                            signal.alarm(0)  # 타임아웃 해제
+                            raise conv_error
                         
                         # 결과 추출
                         if output_format == "markdown":

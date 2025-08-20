@@ -38,6 +38,7 @@ RUN echo "\
 [server]\n\
 headless = true\n\
 enableCORS = false\n\
+enableXsrfProtection = false\n\
 port = 8501\n\
 gatherUsageStats = false\n\
 maxUploadSize = 10\n\
@@ -60,5 +61,5 @@ ENV MARKER_CACHE_DIR /app/.cache/datalab
 # 캐시 디렉터리 권한 설정
 RUN chmod -R 777 /app/.cache
 
-# 앱 실행 (사용자 통계 비활성화)
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false"]
+# 앱 실행 (사용자 통계 비활성화, CORS 설정)
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
