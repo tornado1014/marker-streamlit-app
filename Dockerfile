@@ -40,6 +40,7 @@ headless = true\n\
 enableCORS = false\n\
 port = 8501\n\
 gatherUsageStats = false\n\
+maxUploadSize = 10\n\
 " > /app/.streamlit/config.toml
 
 # 환경 변수로 Streamlit 설정 디렉터리 지정

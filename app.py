@@ -40,8 +40,8 @@ def main():
     
     **주의사항:**
     - 🚀 Hugging Face Spaces에서 16GB 메모리로 구동됩니다.
+    - 📦 파일 크기 제한: 10MB 이하만 업로드 가능합니다.
     - 첫 실행 시 AI 모델 다운로드로 시간이 소요될 수 있습니다.
-    - 대용량 파일은 처리 시간이 오래 걸릴 수 있습니다.
     """)
     
     # 사이드바 설정
@@ -65,19 +65,28 @@ def main():
         help="PDF에서 이미지를 추출합니다"
     )
     
-    # 파일 업로드
+    # 파일 업로드 (크기 제한 추가)
     uploaded_file = st.file_uploader(
         "📁 문서 파일을 업로드하세요",
         type=['pdf', 'docx', 'pptx', 'xlsx', 'html', 'epub', 'png', 'jpg', 'jpeg'],
-        help="지원 형식: PDF, DOCX, PPTX, XLSX, HTML, EPUB, PNG, JPG (최대 200MB)",
+        help="지원 형식: PDF, DOCX, PPTX, XLSX, HTML, EPUB, PNG, JPG (최대 10MB)",
         key="file_uploader"
     )
     
     if uploaded_file is not None:
         # 파일 정보 표시
         file_size = len(uploaded_file.getvalue())
+        file_size_mb = file_size / 1024 / 1024
+        
+        # 파일 크기 제한 체크 (10MB)
+        if file_size_mb > 10:
+            st.error(f"❌ 파일 크기가 너무 큽니다: {file_size_mb:.1f}MB")
+            st.error("🚫 Hugging Face Spaces는 10MB 이하의 파일만 지원합니다.")
+            st.info("💡 더 작은 파일로 시도해주시거나, 로컬 환경에서 사용해주세요.")
+            return
+        
         st.success(f"✅ 파일 업로드 완료: {uploaded_file.name}")
-        st.info(f"📊 파일 크기: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
+        st.info(f"📊 파일 크기: {file_size:,} bytes ({file_size_mb:.1f} MB)")
         
         # 파일 타입 체크
         file_extension = uploaded_file.name.lower().split('.')[-1]
@@ -85,10 +94,12 @@ def main():
             st.info(f"📄 파일 형식: {file_extension.upper()} (지원됨)")
         else:
             st.warning("⚠️ 지원되지 않는 파일 형식입니다.")
+            return
         
         # 변환 버튼
         if st.button("🔄 변환 시작", type="primary"):
             try:
+                st.info(f"🔄 변환 시작: {uploaded_file.name} ({file_size_mb:.1f}MB)")
                 with st.spinner(f"🔄 {file_extension.upper()} 문서를 변환하는 중입니다... 잠시만 기다려주세요."):
                     # 임시 파일로 저장 (확장자에 맞게)
                     file_suffix = f'.{file_extension}'
@@ -201,8 +212,20 @@ def main():
                         st.info("💡 로컬에서만 사용 가능한 기능입니다.")
                     
                     except Exception as e:
-                        st.error(f"❌ 변환 중 오류가 발생했습니다: {str(e)}")
-                        st.info("💡 파일이 너무 크거나 복잡할 수 있습니다. 더 작은 파일로 시도해보세요.")
+                        error_msg = str(e)
+                        st.error(f"❌ 변환 중 오류가 발생했습니다: {error_msg}")
+                        
+                        # 구체적인 에러 타입별 안내
+                        if "403" in error_msg or "Forbidden" in error_msg:
+                            st.error("🚫 403 Forbidden 오류 - Hugging Face Spaces 제한")
+                            st.info("💡 이 오류는 HF Spaces의 네트워크 정책 또는 모델 다운로드 제한 때문일 수 있습니다.")
+                            st.info("🔄 잠시 후 다시 시도하거나, 로컬 환경에서 사용해보세요.")
+                        elif "Memory" in error_msg or "CUDA" in error_msg:
+                            st.info("💡 메모리 부족 - 더 작은 파일로 시도해보세요.")
+                        elif "timeout" in error_msg.lower():
+                            st.info("💡 처리 시간 초과 - 더 단순한 문서로 시도해보세요.")
+                        else:
+                            st.info("💡 일시적 오류일 수 있습니다. 다시 시도해보세요.")
                     
                     finally:
                         # 임시 파일 정리
@@ -213,6 +236,29 @@ def main():
             
             except Exception as e:
                 st.error(f"❌ 처리 중 오류가 발생했습니다: {str(e)}")
+    
+    # 연결 테스트
+    with st.expander("🔧 연결 테스트"):
+        if st.button("🌐 인터넷 연결 테스트"):
+            try:
+                import requests
+                response = requests.get("https://httpbin.org/get", timeout=10)
+                if response.status_code == 200:
+                    st.success("✅ 인터넷 연결 정상")
+                else:
+                    st.error(f"❌ 연결 오류: {response.status_code}")
+            except Exception as e:
+                st.error(f"❌ 연결 실패: {str(e)}")
+        
+        if st.button("📦 Marker 패키지 테스트"):
+            try:
+                from marker.models import create_model_dict
+                st.success("✅ Marker 패키지 import 성공")
+                st.info("🔄 모델 딕셔너리 생성 테스트...")
+                model_dict = create_model_dict()
+                st.success("✅ AI 모델 로딩 성공!")
+            except Exception as e:
+                st.error(f"❌ Marker 테스트 실패: {str(e)}")
     
     # 사용법 가이드
     with st.expander("📖 사용법 가이드"):
