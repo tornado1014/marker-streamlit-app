@@ -116,11 +116,37 @@ def main():
                         except:
                             st.info("📊 Hugging Face Spaces 16GB 환경에서 실행 중")
                         
-                        # Marker 패키지 import
-                        from marker.converters.pdf import PdfConverter
-                        from marker.converters.extraction import ExtractionConverter
-                        from marker.models import create_model_dict
-                        from marker.output import text_from_rendered
+                        # Static 디렉터리 monkey patch 적용
+                        import os
+                        import tempfile
+                        
+                        # 임시 디렉터리를 static으로 사용
+                        temp_static = tempfile.mkdtemp(prefix="marker_static_")
+                        os.chmod(temp_static, 0o777)
+                        
+                        # 환경변수 강제 설정
+                        original_static = "/usr/local/lib/python3.10/site-packages/static"
+                        os.environ['MARKER_STATIC_OVERRIDE'] = temp_static
+                        
+                        # Marker 패키지 import 전에 파일 시스템 함수 monkey patch
+                        original_makedirs = os.makedirs
+                        def patched_makedirs(path, *args, **kwargs):
+                            if "static" in str(path) and "site-packages" in str(path):
+                                # site-packages/static 경로를 임시 디렉터리로 변경
+                                path = temp_static
+                            return original_makedirs(path, *args, **kwargs)
+                        
+                        os.makedirs = patched_makedirs
+                        
+                        try:
+                            # Marker 패키지 import
+                            from marker.converters.pdf import PdfConverter
+                            from marker.converters.extraction import ExtractionConverter
+                            from marker.models import create_model_dict
+                            from marker.output import text_from_rendered
+                        finally:
+                            # 원래 함수 복원
+                            os.makedirs = original_makedirs
                         
                         st.success("✅ Marker 패키지 로드 완료!")
                         
@@ -167,15 +193,27 @@ def main():
                                 except:
                                     pass  # 권한 설정 실패해도 계속 진행
                             
-                            # 기존 static 디렉터리를 우회하는 심볼릭 링크 생성
+                            # Python PATH에 marker 패키지의 static 경로 추가
                             try:
-                                system_static = "/usr/local/lib/python3.10/site-packages/static"
-                                if not os.path.exists(system_static) and not os.path.islink(system_static):
-                                    os.makedirs(os.path.dirname(system_static), exist_ok=True)
-                                    os.symlink(static_dir, system_static)
-                                    st.info("🔗 Static 디렉터리 심볼릭 링크 생성")
+                                import sys
+                                # Marker가 static 파일을 찾는 경로를 수정
+                                marker_static_paths = [
+                                    static_dir,
+                                    f"{cache_dir}/marker_static",
+                                    "/app/static"
+                                ]
+                                
+                                for static_path in marker_static_paths:
+                                    os.makedirs(static_path, exist_ok=True)
+                                    os.chmod(static_path, 0o777)
+                                
+                                # 환경변수로 여러 static 경로 설정
+                                os.environ['MARKER_STATIC_DIR'] = static_dir
+                                os.environ['PYTHONPATH'] = f"{static_dir}:{os.environ.get('PYTHONPATH', '')}"
+                                
+                                st.info("📁 Static 디렉터리 우회 경로 설정 완료")
                             except Exception as e:
-                                st.info(f"⚠️ 심볼릭 링크 생성 실패: {str(e)}")
+                                st.info(f"⚠️ Static 경로 설정 실패: {str(e)}")
                             
                             st.info(f"📁 캐시 디렉터리: {cache_dir}")
                             
