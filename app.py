@@ -136,8 +136,25 @@ def main():
                         
                         # AI 모델 로드 (Hugging Face Spaces 16GB 환경)
                         try:
-                            # HF 토큰 환경변수 설정 시도
+                            # 캐시 디렉터리 환경변수 설정
                             import os
+                            cache_dir = "/app/.cache"
+                            os.environ['XDG_CACHE_HOME'] = cache_dir
+                            os.environ['HUGGINGFACE_HUB_CACHE'] = f"{cache_dir}/huggingface"
+                            os.environ['TORCH_HOME'] = f"{cache_dir}/torch"
+                            os.environ['TRANSFORMERS_CACHE'] = f"{cache_dir}/transformers"
+                            os.environ['HF_HOME'] = f"{cache_dir}/huggingface"
+                            
+                            # 캐시 디렉터리 생성
+                            os.makedirs(cache_dir, exist_ok=True)
+                            os.makedirs(f"{cache_dir}/huggingface", exist_ok=True)
+                            os.makedirs(f"{cache_dir}/torch", exist_ok=True)
+                            os.makedirs(f"{cache_dir}/transformers", exist_ok=True)
+                            os.makedirs(f"{cache_dir}/datalab", exist_ok=True)
+                            
+                            st.info(f"📁 캐시 디렉터리: {cache_dir}")
+                            
+                            # HF 토큰 환경변수 설정 시도
                             if not os.getenv('HF_TOKEN'):
                                 st.warning("⚠️ HF_TOKEN 환경변수가 설정되지 않았습니다.")
                                 st.info("💡 토큰 없이 모델 로딩을 시도합니다...")
@@ -267,13 +284,32 @@ def main():
         
         if st.button("📦 Marker 패키지 테스트"):
             try:
+                # 캐시 디렉터리 환경변수 설정
+                import os
+                cache_dir = "/app/.cache"
+                os.environ['XDG_CACHE_HOME'] = cache_dir
+                os.environ['HUGGINGFACE_HUB_CACHE'] = f"{cache_dir}/huggingface"
+                os.environ['TORCH_HOME'] = f"{cache_dir}/torch"
+                os.environ['TRANSFORMERS_CACHE'] = f"{cache_dir}/transformers"
+                os.environ['HF_HOME'] = f"{cache_dir}/huggingface"
+                
+                # 캐시 디렉터리 생성
+                os.makedirs(cache_dir, exist_ok=True)
+                os.makedirs(f"{cache_dir}/huggingface", exist_ok=True)
+                os.makedirs(f"{cache_dir}/datalab", exist_ok=True)
+                
                 from marker.models import create_model_dict
                 st.success("✅ Marker 패키지 import 성공")
+                st.info(f"📁 캐시 경로: {cache_dir}")
                 st.info("🔄 모델 딕셔너리 생성 테스트...")
                 model_dict = create_model_dict()
                 st.success("✅ AI 모델 로딩 성공!")
             except Exception as e:
-                st.error(f"❌ Marker 테스트 실패: {str(e)}")
+                error_msg = str(e)
+                st.error(f"❌ Marker 테스트 실패: {error_msg}")
+                if "Permission denied" in error_msg:
+                    st.error("🚫 캐시 디렉터리 권한 문제")
+                    st.info("💡 Docker 컨테이너 권한 설정을 확인하세요.")
     
     # 사용법 가이드
     with st.expander("📖 사용법 가이드"):

@@ -46,5 +46,19 @@ maxUploadSize = 10\n\
 # 환경 변수로 Streamlit 설정 디렉터리 지정
 ENV STREAMLIT_CONFIG_DIR /app/.streamlit
 
+# 캐시 디렉터리 설정 및 권한 부여
+RUN mkdir -p /app/.cache/huggingface /app/.cache/torch /app/.cache/transformers /app/.cache/datalab
+ENV XDG_CACHE_HOME /app/.cache
+ENV HUGGINGFACE_HUB_CACHE /app/.cache/huggingface
+ENV TORCH_HOME /app/.cache/torch
+ENV TRANSFORMERS_CACHE /app/.cache/transformers
+ENV HF_HOME /app/.cache/huggingface
+
+# Marker 특화 캐시 경로
+ENV MARKER_CACHE_DIR /app/.cache/datalab
+
+# 캐시 디렉터리 권한 설정
+RUN chmod -R 777 /app/.cache
+
 # 앱 실행 (사용자 통계 비활성화)
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false"]
