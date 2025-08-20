@@ -58,8 +58,18 @@ ENV HF_HOME /app/.cache/huggingface
 # Marker 특화 캐시 경로
 ENV MARKER_CACHE_DIR /app/.cache/datalab
 
+# Static 파일 경로를 writable 위치로 변경
+ENV STATIC_ROOT /app/.cache/static
+RUN mkdir -p /app/.cache/static
+RUN chmod 777 /app/.cache/static
+
 # 캐시 디렉터리 권한 설정
 RUN chmod -R 777 /app/.cache
+
+# Python 패키지 디렉터리 권한 설정
+RUN chmod -R 755 /usr/local/lib/python3.10/site-packages/
+RUN find /usr/local/lib/python3.10/site-packages/ -type d -exec chmod 755 {} \;
+RUN find /usr/local/lib/python3.10/site-packages/ -type f -exec chmod 644 {} \;
 
 # 앱 실행 (사용자 통계 비활성화, CORS 설정)
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]

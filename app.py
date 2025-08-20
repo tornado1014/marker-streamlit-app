@@ -145,12 +145,21 @@ def main():
                             os.environ['TRANSFORMERS_CACHE'] = f"{cache_dir}/transformers"
                             os.environ['HF_HOME'] = f"{cache_dir}/huggingface"
                             
-                            # 캐시 디렉터리 생성
-                            os.makedirs(cache_dir, exist_ok=True)
-                            os.makedirs(f"{cache_dir}/huggingface", exist_ok=True)
-                            os.makedirs(f"{cache_dir}/torch", exist_ok=True)
-                            os.makedirs(f"{cache_dir}/transformers", exist_ok=True)
-                            os.makedirs(f"{cache_dir}/datalab", exist_ok=True)
+                            # 캐시 디렉터리 생성 및 권한 설정
+                            dirs_to_create = [
+                                cache_dir,
+                                f"{cache_dir}/huggingface",
+                                f"{cache_dir}/torch", 
+                                f"{cache_dir}/transformers",
+                                f"{cache_dir}/datalab"
+                            ]
+                            
+                            for dir_path in dirs_to_create:
+                                os.makedirs(dir_path, exist_ok=True)
+                                try:
+                                    os.chmod(dir_path, 0o777)
+                                except:
+                                    pass  # 권한 설정 실패해도 계속 진행
                             
                             st.info(f"📁 캐시 디렉터리: {cache_dir}")
                             
