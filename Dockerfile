@@ -27,7 +27,20 @@ COPY . .
 # Streamlit 포트 설정
 EXPOSE 8501
 
-# Streamlit 설정 디렉터리 생성 (권한 문제 해결)
+# 환경 변수 설정 - Railway용
+ENV PYTHONUNBUFFERED=1
+ENV HF_HOME=/tmp/huggingface
+ENV TRANSFORMERS_CACHE=/tmp/huggingface/transformers
+ENV HF_DATASETS_CACHE=/tmp/huggingface/datasets
+ENV MARKER_CACHE_DIR=/tmp/marker_cache
+ENV XDG_CACHE_HOME=/tmp/cache
+ENV PYTHONPATH=/app
+
+# 캐시 디렉터리 생성 및 권한 설정
+RUN mkdir -p /tmp/huggingface /tmp/marker_cache /tmp/cache /tmp/huggingface/transformers /tmp/huggingface/datasets
+RUN chmod -R 777 /tmp/huggingface /tmp/marker_cache /tmp/cache
+
+# Streamlit 설정 디렉터리 생성
 RUN mkdir -p /app/.streamlit
 RUN echo "\
 [general]\n\
@@ -40,6 +53,7 @@ headless = true\n\
 enableCORS = false\n\
 enableXsrfProtection = false\n\
 port = 8501\n\
+address = \"0.0.0.0\"\n\
 gatherUsageStats = false\n\
 maxUploadSize = 10\n\
 " > /app/.streamlit/config.toml
@@ -47,35 +61,5 @@ maxUploadSize = 10\n\
 # 환경 변수로 Streamlit 설정 디렉터리 지정
 ENV STREAMLIT_CONFIG_DIR /app/.streamlit
 
-# 캐시 디렉터리 설정 및 권한 부여
-RUN mkdir -p /app/.cache/huggingface /app/.cache/torch /app/.cache/transformers /app/.cache/datalab
-ENV XDG_CACHE_HOME /app/.cache
-ENV HUGGINGFACE_HUB_CACHE /app/.cache/huggingface
-ENV TORCH_HOME /app/.cache/torch
-ENV TRANSFORMERS_CACHE /app/.cache/transformers
-ENV HF_HOME /app/.cache/huggingface
-
-# Marker 특화 캐시 경로
-ENV MARKER_CACHE_DIR /app/.cache/datalab
-
-# Static 파일 경로를 writable 위치로 변경
-ENV STATIC_ROOT /app/.cache/static
-RUN mkdir -p /app/.cache/static
-RUN chmod 777 /app/.cache/static
-
-# 캐시 디렉터리 권한 설정
-RUN chmod -R 777 /app/.cache
-
-# Python 패키지 디렉터리 권한 설정
-RUN chmod -R 755 /usr/local/lib/python3.10/site-packages/
-RUN find /usr/local/lib/python3.10/site-packages/ -type d -exec chmod 755 {} \;
-RUN find /usr/local/lib/python3.10/site-packages/ -type f -exec chmod 644 {} \;
-
-# Static 디렉터리를 미리 생성하고 심볼릭 링크 설정
-RUN mkdir -p /app/.cache/static_fallback
-RUN chmod 777 /app/.cache/static_fallback
-RUN mkdir -p /usr/local/lib/python3.10/site-packages/
-RUN ln -sf /app/.cache/static_fallback /usr/local/lib/python3.10/site-packages/static
-
-# 앱 실행 (사용자 통계 비활성화, CORS 설정)
+# 앱 실행
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]

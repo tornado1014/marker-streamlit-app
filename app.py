@@ -4,6 +4,24 @@ import os
 import sys
 import signal
 
+# Hugging Face Spaces 환경 설정 - 캐시 디렉토리 권한 문제 해결
+os.environ['HF_HOME'] = '/tmp/huggingface'
+os.environ['TRANSFORMERS_CACHE'] = '/tmp/huggingface/transformers'
+os.environ['HF_DATASETS_CACHE'] = '/tmp/huggingface/datasets'
+os.environ['MARKER_CACHE_DIR'] = '/tmp/marker_cache'
+os.environ['XDG_CACHE_HOME'] = '/tmp/cache'
+os.environ['TORCH_HOME'] = '/tmp/torch'
+os.environ['HUGGINGFACE_HUB_CACHE'] = '/tmp/huggingface/hub'
+
+# 캐시 디렉토리 생성
+cache_dirs = [
+    '/tmp/huggingface', '/tmp/marker_cache', '/tmp/cache', 
+    '/tmp/huggingface/transformers', '/tmp/huggingface/datasets',
+    '/tmp/torch', '/tmp/huggingface/hub'
+]
+for cache_dir in cache_dirs:
+    os.makedirs(cache_dir, exist_ok=True)
+
 # Streamlit Community Cloud 환경설정
 st.set_page_config(
     page_title="📄 Marker Document Converter",
@@ -120,15 +138,23 @@ def main():
         # 변환 버튼
         if st.button("🔄 변환 시작", type="primary"):
             try:
+<<<<<<< HEAD
                 st.info(f"🔄 변환 시작: {uploaded_file.name} ({file_size_mb:.1f}MB)")
                 with st.spinner(f"🔄 {file_extension.upper()} 문서를 변환하는 중입니다... 잠시만 기다려주세요."):
                     # 임시 파일로 저장 (확장자에 맞게)
                     file_suffix = f'.{file_extension}'
                     with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as tmp_file:
+=======
+                with st.spinner("🔄 PDF를 변환하는 중입니다... 잠시만 기다려주세요."):
+                    # 임시 파일을 /tmp 디렉토리에 생성 (권한 문제 해결)
+                    file_extension = uploaded_file.name.lower().split('.')[-1]
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_extension}', dir='/tmp') as tmp_file:
+>>>>>>> 361518c9f61cc826917df3f5e4b5170b5a2f68db
                         tmp_file.write(uploaded_file.getvalue())
                         tmp_path = tmp_file.name
                     
                     try:
+<<<<<<< HEAD
                         # 메모리 사용량 체크 (Hugging Face Spaces 16GB)
                         try:
                             import psutil
@@ -136,6 +162,15 @@ def main():
                             st.info(f"📊 현재 메모리 사용률: {memory_usage.percent:.1f}% (사용가능: {memory_usage.available//1024//1024//1024:.1f}GB)")
                         except:
                             st.info("📊 Hugging Face Spaces 16GB 환경에서 실행 중")
+=======
+                        # 메모리 사용량 체크
+                        import psutil
+                        memory_usage = psutil.virtual_memory()
+                        st.info(f"📊 현재 메모리 사용률: {memory_usage.percent:.1f}% (사용가능: {memory_usage.available/1024/1024/1024:.1f}GB)")
+                        
+                        # 캐시 디렉토리 확인 메시지
+                        st.info(f"📁 캐시 디렉토리: {os.environ.get('MARKER_CACHE_DIR', '/tmp/marker_cache')}")
+>>>>>>> 361518c9f61cc826917df3f5e4b5170b5a2f68db
                         
                         # Static 디렉터리 monkey patch 적용
                         # 임시 디렉터리를 static으로 사용
@@ -143,6 +178,7 @@ def main():
                         os.chmod(temp_static, 0o777)
                         st.info(f"🗂️ 임시 static 디렉터리 생성: {temp_static}")
                         
+<<<<<<< HEAD
                         # 환경변수 강제 설정
                         original_static = "/usr/local/lib/python3.10/site-packages/static"
                         os.environ['MARKER_STATIC_OVERRIDE'] = temp_static
@@ -196,16 +232,30 @@ def main():
                             os.makedirs = original_makedirs
                             os.chmod = original_chmod
                             builtins.open = original_open
+=======
+                        # HF_TOKEN 환경변수 확인
+                        hf_token = os.environ.get("HF_TOKEN")
+                        if not hf_token:
+                            st.warning("⚠️ HF_TOKEN 환경변수가 설정되지 않았습니다.")
+                            st.info("💡 토큰 없이 모델 로딩을 시도합니다...")
+                        
+                        # Marker 패키지 import
+                        from marker.convert import convert_single_pdf
+                        from marker.models import load_all_models
+>>>>>>> 361518c9f61cc826917df3f5e4b5170b5a2f68db
                         
                         st.success("✅ Marker 패키지 로드 완료!")
                         
-                        # 진행 상태 표시
-                        progress_bar = st.progress(0)
-                        status_text = st.empty()
+                        st.info("🔄 PDF 문서 분석 중...")
+                        st.info(f"🔍 처리할 파일: {uploaded_file.name} ({uploaded_file.type.upper()})")
                         
-                        status_text.text("🔄 AI 모델 로딩 중...")
-                        progress_bar.progress(10)
+                        # AI 모델 로딩 with progress spinner
+                        with st.spinner("💡 AI 모델 로딩 중..."):
+                            # 모델 로드 시 캐시 경로 명시적 지정
+                            model_lst = load_all_models()
+                            st.success("✅ AI 모델 로딩 완료!")
                         
+<<<<<<< HEAD
                         # 파일 확장자는 이미 위에서 확인했음
                         st.info(f"🔍 처리할 파일: {uploaded_file.name} ({file_extension.upper()})")
                         
@@ -301,15 +351,18 @@ def main():
                             converter = PdfConverter(
                                 artifact_dict=model_dict,
                                 config=config
+=======
+                        # 변환 실행
+                        with st.spinner("🔄 문서 변환 중..."):
+                            full_text, images, out_meta = convert_single_pdf(
+                                tmp_path,
+                                model_lst,
+                                extract_images=extract_images,
+                                ocr_all_pages=use_llm
+>>>>>>> 361518c9f61cc826917df3f5e4b5170b5a2f68db
                             )
-                        else:
-                            # 다른 문서 형식은 ExtractionConverter 사용
-                            converter = ExtractionConverter(
-                                artifact_dict=model_dict,
-                                config=config
-                            )
-                        progress_bar.progress(50)
                         
+<<<<<<< HEAD
                         status_text.text("🔄 변환 실행 중...")
                         
                         # 변환 수행 (타임아웃 설정)
@@ -351,13 +404,21 @@ def main():
                                 raise conv_error
                         
                         # 결과 추출
+=======
+                        # 출력 형식에 따른 결과 생성
+>>>>>>> 361518c9f61cc826917df3f5e4b5170b5a2f68db
                         if output_format == "markdown":
-                            result = text_from_rendered(rendered)
-                        else:
-                            result = str(rendered)  # JSON/HTML 형식
-                        
-                        progress_bar.progress(100)
-                        status_text.text("✅ 변환 완료!")
+                            result = full_text
+                        elif output_format == "json":
+                            import json
+                            result_data = {
+                                "text": full_text,
+                                "metadata": out_meta,
+                                "images": len(images) if images else 0
+                            }
+                            result = json.dumps(result_data, ensure_ascii=False, indent=2)
+                        else:  # html
+                            result = f"<html><body><pre>{full_text}</pre></body></html>"
                         
                         # 결과 표시
                         st.success("🎉 변환이 완료되었습니다!")
@@ -388,7 +449,16 @@ def main():
                         st.error(f"오류 상세: {str(e)}")
                         st.info("💡 로컬에서만 사용 가능한 기능입니다.")
                     
+                    except PermissionError as e:
+                        if "/usr/local" in str(e) or "Permission denied" in str(e):
+                            st.error("❌ 변환 중 오류가 발생했습니다: 시스템 파일 접근 권한 문제")
+                            st.error(f"상세 오류: {str(e)}")
+                            st.info("💡 일시적 오류일 수 있습니다. 다시 시도해보세요.")
+                        else:
+                            st.error(f"❌ 권한 오류: {str(e)}")
+                    
                     except Exception as e:
+<<<<<<< HEAD
                         error_msg = str(e)
                         st.error(f"❌ 변환 중 오류가 발생했습니다: {error_msg}")
                         
@@ -403,6 +473,10 @@ def main():
                             st.info("💡 처리 시간 초과 - 더 단순한 문서로 시도해보세요.")
                         else:
                             st.info("💡 일시적 오류일 수 있습니다. 다시 시도해보세요.")
+=======
+                        st.error(f"❌ 변환 중 오류가 발생했습니다: {str(e)}")
+                        st.info("💡 일시적 오류일 수 있습니다. 다시 시도해보세요.")
+>>>>>>> 361518c9f61cc826917df3f5e4b5170b5a2f68db
                     
                     finally:
                         # 임시 파일 정리
