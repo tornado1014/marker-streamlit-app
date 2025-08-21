@@ -2,6 +2,7 @@ import streamlit as st
 import tempfile
 import os
 import sys
+import signal
 
 # Streamlit Community Cloud 환경설정
 st.set_page_config(
@@ -117,12 +118,10 @@ def main():
                             st.info("📊 Hugging Face Spaces 16GB 환경에서 실행 중")
                         
                         # Static 디렉터리 monkey patch 적용
-                        import os
-                        import tempfile
-                        
                         # 임시 디렉터리를 static으로 사용
                         temp_static = tempfile.mkdtemp(prefix="marker_static_")
                         os.chmod(temp_static, 0o777)
+                        st.info(f"🗂️ 임시 static 디렉터리 생성: {temp_static}")
                         
                         # 환경변수 강제 설정
                         original_static = "/usr/local/lib/python3.10/site-packages/static"
