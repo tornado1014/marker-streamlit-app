@@ -13,6 +13,26 @@ st.set_page_config(
 )
 
 def main():
+    # 앱 시작 시 static 디렉터리 심볼릭 링크 확인/생성
+    try:
+        static_fallback = "/app/.cache/static_fallback"
+        system_static = "/usr/local/lib/python3.10/site-packages/static"
+        
+        # fallback 디렉터리 생성
+        os.makedirs(static_fallback, exist_ok=True)
+        os.chmod(static_fallback, 0o777)
+        
+        # 심볼릭 링크가 없거나 잘못되었다면 재생성
+        if not os.path.islink(system_static) or not os.path.exists(system_static):
+            try:
+                if os.path.exists(system_static):
+                    os.remove(system_static)
+                os.symlink(static_fallback, system_static)
+            except:
+                pass  # 실패해도 monkey patch로 우회
+    except:
+        pass  # 모든 실패 무시하고 계속 진행
+    
     # 디버그 정보
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔧 디버그 정보")
@@ -317,7 +337,18 @@ def main():
                             return
                         except Exception as conv_error:
                             signal.alarm(0)  # 타임아웃 해제
-                            raise conv_error
+                            # static 디렉터리 문제라면 한 번 더 시도
+                            if "static" in str(conv_error) and "Permission denied" in str(conv_error):
+                                st.warning("🔄 Static 디렉터리 문제 감지, 대안 경로로 재시도...")
+                                try:
+                                    # 환경변수로 우회 경로 설정
+                                    os.environ['PYTHONPATH'] = f"{temp_static}:/app/.cache/static_fallback:{os.environ.get('PYTHONPATH', '')}"
+                                    rendered = converter(tmp_path)
+                                    st.success("✅ 대안 경로로 변환 성공!")
+                                except Exception as final_error:
+                                    raise final_error
+                            else:
+                                raise conv_error
                         
                         # 결과 추출
                         if output_format == "markdown":

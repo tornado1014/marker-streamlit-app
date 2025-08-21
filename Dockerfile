@@ -71,5 +71,11 @@ RUN chmod -R 755 /usr/local/lib/python3.10/site-packages/
 RUN find /usr/local/lib/python3.10/site-packages/ -type d -exec chmod 755 {} \;
 RUN find /usr/local/lib/python3.10/site-packages/ -type f -exec chmod 644 {} \;
 
+# Static 디렉터리를 미리 생성하고 심볼릭 링크 설정
+RUN mkdir -p /app/.cache/static_fallback
+RUN chmod 777 /app/.cache/static_fallback
+RUN mkdir -p /usr/local/lib/python3.10/site-packages/
+RUN ln -sf /app/.cache/static_fallback /usr/local/lib/python3.10/site-packages/static
+
 # 앱 실행 (사용자 통계 비활성화, CORS 설정)
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.gatherUsageStats=false", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
