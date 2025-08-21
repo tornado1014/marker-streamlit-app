@@ -127,15 +127,43 @@ def main():
                         original_static = "/usr/local/lib/python3.10/site-packages/static"
                         os.environ['MARKER_STATIC_OVERRIDE'] = temp_static
                         
-                        # Marker 패키지 import 전에 파일 시스템 함수 monkey patch
+                        # 더 포괄적인 파일 시스템 함수 monkey patch
                         original_makedirs = os.makedirs
+                        original_open = open
+                        original_chmod = os.chmod
+                        
                         def patched_makedirs(path, *args, **kwargs):
-                            if "static" in str(path) and "site-packages" in str(path):
+                            path_str = str(path)
+                            if "static" in path_str and "site-packages" in path_str:
                                 # site-packages/static 경로를 임시 디렉터리로 변경
+                                path = temp_static
+                            elif "/usr/local/lib/python3.10/site-packages/static" in path_str:
                                 path = temp_static
                             return original_makedirs(path, *args, **kwargs)
                         
+                        def patched_open(file, *args, **kwargs):
+                            file_str = str(file) 
+                            if "static" in file_str and "site-packages" in file_str:
+                                # static 파일 경로를 임시 디렉터리로 변경
+                                file = file_str.replace("/usr/local/lib/python3.10/site-packages/static", temp_static)
+                            return original_open(file, *args, **kwargs)
+                        
+                        def patched_chmod(path, *args, **kwargs):
+                            path_str = str(path)
+                            if "static" in path_str and "site-packages" in path_str:
+                                # static 디렉터리 chmod를 임시 디렉터리로 변경
+                                path = temp_static
+                            try:
+                                return original_chmod(path, *args, **kwargs)
+                            except:
+                                pass  # 권한 설정 실패 무시
+                        
+                        # 함수들을 패치
                         os.makedirs = patched_makedirs
+                        os.chmod = patched_chmod
+                        # open은 builtin이므로 특별히 처리
+                        import builtins
+                        builtins.open = patched_open
                         
                         try:
                             # Marker 패키지 import
@@ -144,8 +172,10 @@ def main():
                             from marker.models import create_model_dict
                             from marker.output import text_from_rendered
                         finally:
-                            # 원래 함수 복원
+                            # 원래 함수들 복원
                             os.makedirs = original_makedirs
+                            os.chmod = original_chmod
+                            builtins.open = original_open
                         
                         st.success("✅ Marker 패키지 로드 완료!")
                         
@@ -269,6 +299,11 @@ def main():
                             raise TimeoutError("변환 처리 시간 초과")
                         
                         try:
+                            # 변환 중에도 monkey patch 재적용
+                            os.makedirs = patched_makedirs
+                            os.chmod = patched_chmod
+                            builtins.open = patched_open
+                            
                             # 5분 타임아웃 설정
                             signal.signal(signal.SIGALRM, timeout_handler)
                             signal.alarm(300)  # 5분
