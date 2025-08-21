@@ -162,7 +162,6 @@ def main():
                         # AI 모델 로드 (Hugging Face Spaces 16GB 환경)
                         try:
                             # 캐시 디렉터리 환경변수 설정
-                            import os
                             cache_dir = "/app/.cache"
                             os.environ['XDG_CACHE_HOME'] = cache_dir
                             os.environ['HUGGINGFACE_HUB_CACHE'] = f"{cache_dir}/huggingface"
@@ -365,7 +364,6 @@ def main():
         if st.button("📦 Marker 패키지 테스트"):
             try:
                 # 캐시 디렉터리 환경변수 설정
-                import os
                 cache_dir = "/app/.cache"
                 os.environ['XDG_CACHE_HOME'] = cache_dir
                 os.environ['HUGGINGFACE_HUB_CACHE'] = f"{cache_dir}/huggingface"
